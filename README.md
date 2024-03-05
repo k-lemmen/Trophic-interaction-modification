@@ -13,6 +13,6 @@ R scripts for fitting the ODEs are in the '03 - ODE Fitting' folder.
 
 R scripts for community dynamics are in the '04 - Community Dynamics Simulation' folder. 
 
-Outputs can be found in the “05 – Output” Folder, this includes (i) Search grids of initial starting points and the corresponding final parameter estimates used to find a global minimum and avoid the issue of multiple minima (Appendix S1d) and (ii) fits of the 13 different functional response models within the ODE system. Rdata files are provided for convenience, but all outputs can be independently derived from the provided code and CSV files.
+Outputs can be found in the “05 – Output” Folder, this includes (i) Search grids of initial starting points and the corresponding final parameter estimates used to find a global minimum (Appendix S1d) and (ii) fits of the 13 different functional response models within the ODE system. Rdata files are provided for convenience, but all outputs can be independently derived from the provided code and CSV files.
 
 Metadata can be found ing the “06 – Metadata” folder and provides a description and units for all variables.
