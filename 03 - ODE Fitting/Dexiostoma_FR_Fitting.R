@@ -4,6 +4,8 @@ library(here)
 library(bbmle)
 library(ggpubr)
 
+library(MASS)
+
 library(doParallel)
 library(foreach)
 library(bbmle)
@@ -29,6 +31,8 @@ loadRData <- function(fileName){
   get(ls()[ls() != "fileName"])
 }
 
+quant = function(col) quantile(col, c(0.025,0.975)) # 95% percentiles
+
 ##### Data ####
 mort <- 0.13333
 conversion <- exp(-15)
@@ -38,7 +42,6 @@ TIM_data <- loadRData(here("01 - Data", "TIM_data.RData")) # Data
 dexio_para_wrk <- TIM_data %>% filter(Exp == "DP")
 
 #### Model Fits ####
-
 
 #### 0. Competition #####
 ##### Search Grid #####
@@ -188,6 +191,10 @@ DP_LV_pe <- dexio_para_comp_flex_pe
 
 min_comp <- DP_comp_PECs %>% filter(BIC == min(DP_comp_PECs$BIC, na.rm = T))
 
+if(nrow(min_comp)>1){
+  min_comp <- DP_comp_PECs %>% filter(strtpt %in% sample(filter(DP_comp_PECs, BIC <= min(DP_comp_PECs$BIC, na.rm = T)+0.1)$strtpt,1))
+}
+
 DPcomp_pe_mod =  mle2(minuslogl = nll.odeint.lv,
                       method= "Nelder-Mead",
                       control = list(maxit = 5000),
@@ -212,7 +219,7 @@ DPcomp_pe_mod =  mle2(minuslogl = nll.odeint.lv,
                                   data = filter(dexio_para_wrk, Type =="Comp_Control" | Type =="Dexio_Con" | Type =="Para_Con"))
                       
 )
-save(DPcomp_pe_mod, file = "dexio_para_comp_fit.RData")
+#save(DPcomp_pe_mod, file = "dexio_para_comp_fit.RData")
 comp_tidy<-tidy(DPcomp_pe_mod)
 
 (nrow(DP_comp_PECs)/nrow(DP_LV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
@@ -352,7 +359,11 @@ DP_t2_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t2_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_T2 <- DP_T2_PECs %>% filter(BIC == min(DP_T2_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_T2 <- DP_T2_PECs %>% filter(BIC <= min(DP_T2_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_T2)>1){
+  min_T2 <- DP_T2_PECs %>% filter(strtpt %in% sample(filter(DP_T2_PECs, BIC <= min(DP_T2_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_T2_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.a1.h1.lv,
                             method= "Nelder-Mead",
@@ -385,11 +396,15 @@ DP_min_T2_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.a1.h1.lv,
                                          alpha22 = coef(DPcomp_pe_mod)[5],
                                          alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_T2_fixLV_mod, file = "DP_T2_fixLV_mod.Rdata")
-tidy(DP_min_T2_fixLV_mod)
+#save(DP_min_T2_fixLV_mod, file = "DP_T2_fixLV_mod.Rdata")
+(Dexio_fit1 <- tidy(DP_min_T2_fixLV_mod))
 
 (nrow(DP_T2_PECs)/nrow(DP_t2_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_T2_fixLV_mod)
+
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit1$estimate, Sigma = vcov(DP_min_T2_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit1_pe_confint <- apply(pars.picked,2,quant)
 
 #### 2. Type II + linear a TIM #####
 ##### Search Grid #####
@@ -527,7 +542,11 @@ DP_t2.a12_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t2.a12_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_t2.a12 <- DP_t2.a12_PECs %>% filter(BIC == min(DP_t2.a12_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_t2.a12 <- DP_t2.a12_PECs %>% filter(BIC <= min(DP_t2.a12_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t2.a12)>1){
+  min_t2.a12 <- DP_t2.a12_PECs %>% filter(strtpt %in% sample(filter(DP_t2.a12_PECs, BIC <= min(DP_t2.a12_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_t2.a12_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.a1.h1.lv,
                                 method= "Nelder-Mead",
@@ -560,12 +579,15 @@ DP_min_t2.a12_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.a1.h1.lv,
                                              alpha22 = coef(DPcomp_pe_mod)[5],
                                              alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t2.a12_fixLV_mod, file = "DP_t2.a12_fixLV_mod.Rdata")
-tidy(DP_min_t2.a12_fixLV_mod)
+#save(DP_min_t2.a12_fixLV_mod, file = "DP_t2.a12_fixLV_mod.Rdata")
+Dexio_fit2 <- tidy(DP_min_t2.a12_fixLV_mod)
 
 (nrow(DP_t2.a12_PECs)/nrow(DP_t2.a12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.a12_fixLV_mod)
 
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit2$estimate, Sigma = vcov(DP_min_t2.a12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit2_pe_confint <- apply(pars.picked,2,quant)
 
 #### 3. Type II + linear h TIM #####
 ##### Search Grid #####
@@ -704,7 +726,11 @@ DP_t2.h12_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t2.h12_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_t2.h12 <- DP_t2.h12_PECs %>% filter(BIC == min(DP_t2.h12_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_t2.h12 <- DP_t2.h12_PECs %>% filter(BIC <= min(DP_t2.h12_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t2.h12)>1){
+  min_t2.h12 <- DP_t2.h12_PECs %>% filter(strtpt %in% sample(filter(DP_t2.h12_PECs, BIC <= min(DP_t2.h12_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_t2.h12_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.a1.h1.lv,
                                 method= "Nelder-Mead",
@@ -736,11 +762,15 @@ DP_min_t2.h12_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.a1.h1.lv,
                                              alpha22 = coef(DPcomp_pe_mod)[5],
                                              alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t2.h12_fixLV_mod, file = "DP_t2.h12_fixLV_mod.Rdata")
-tidy(DP_min_t2.h12_fixLV_mod)
+#save(DP_min_t2.h12_fixLV_mod, file = "DP_t2.h12_fixLV_mod.Rdata")
+Dexio_fit3 <- tidy(DP_min_t2.h12_fixLV_mod)
 
 (nrow(DP_t2.h12_PECs)/nrow(DP_t2.h12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.h12_fixLV_mod)
+
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit3$estimate, Sigma = vcov(DP_min_t2.h12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit3_pe_confint <- apply(pars.picked,2,quant)
 
 #### 4. Type II + linear a TIM  + linear h TIM #####
 ##### Search Grid #####
@@ -883,7 +913,11 @@ DP_t2.a12.h12_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t2.a12.h12_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_t2.a12.h12 <- DP_t2.a12.h12_PECs %>% filter(BIC == min(DP_t2.a12.h12_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_t2.a12.h12 <- DP_t2.a12.h12_PECs %>% filter(BIC <= min(DP_t2.a12.h12_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t2.a12.h12)>1){
+  min_t2.a12.h12 <- DP_t2.a12.h12_PECs %>% filter(strtpt %in% sample(filter(DP_t2.a12.h12_PECs, BIC <= min(DP_t2.a12.h12_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_t2.a12.h12_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.a1.h1.lv,
                                     method= "Nelder-Mead",
@@ -915,11 +949,15 @@ DP_min_t2.a12.h12_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.a1.h1.lv,
                                                  alpha22 = coef(DPcomp_pe_mod)[5],
                                                  alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t2.a12.h12_fixLV_mod, file = "DP_t2.a12.h12_fixLV_mod.Rdata")
-tidy(DP_min_t2.a12.h12_fixLV_mod)
+#save(DP_min_t2.a12.h12_fixLV_mod, file = "DP_t2.a12.h12_fixLV_mod.Rdata")
+Dexio_fit4 <- tidy(DP_min_t2.a12.h12_fixLV_mod)
 
 (nrow(DP_t2.a12.h12_PECs)/nrow(DP_t2.a12.h12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.a12.h12_fixLV_mod)
+
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit4$estimate, Sigma = vcov(DP_min_t2.a12.h12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit4_pe_confint <- apply(pars.picked,2,quant)
 
 #### 5. Type II + van Veen #####
 ##### Search Grid #####
@@ -1058,7 +1096,11 @@ DP_t2.vv_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t2.vv_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_t2.vv <- DP_t2.vv_PECs %>% filter(BIC == min(DP_t2.vv_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_t2.vv <- DP_t2.vv_PECs %>% filter(BIC <= min(DP_t2.vv_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t2.vv)>1){
+  min_t2.vv <- DP_t2.vv_PECs %>% filter(strtpt %in% sample(filter(DP_t2.vv_PECs, BIC <= min(DP_t2.vv_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_t2.vv_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.h1.VV.lv,
                                method= "Nelder-Mead",
@@ -1091,11 +1133,15 @@ DP_min_t2.vv_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.h1.VV.lv,
                                             alpha22 = coef(DPcomp_pe_mod)[5],
                                             alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t2.vv_fixLV_mod, file = "DP_t2.vv_fixLV_mod.Rdata")
-tidy(DP_min_t2.vv_fixLV_mod)
+#save(DP_min_t2.vv_fixLV_mod, file = "DP_t2.vv_fixLV_mod.Rdata")
+Dexio_fit5 <- tidy(DP_min_t2.vv_fixLV_mod)
 
 (nrow(DP_t2.vv_PECs)/nrow(DP_t2.vv_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.vv_fixLV_mod)
+
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit5$estimate, Sigma = vcov(DP_min_t2.vv_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit5_pe_confint <- apply(pars.picked,2,quant)
 
 
 #### 6. Type II + van Veen + linear h TIM #####
@@ -1240,7 +1286,11 @@ DP_t2.vv.h12_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t2.vv.h12_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_t2.vv.h12 <- DP_t2.vv.h12_PECs %>% filter(BIC == min(DP_t2.vv.h12_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_t2.vv.h12 <- DP_t2.vv.h12_PECs %>% filter(BIC <= min(DP_t2.vv.h12_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t2.vv.h12)>1){
+  min_t2.vv.h12 <- DP_t2.vv.h12_PECs %>% filter(strtpt %in% sample(filter(DP_t2.vv.h12_PECs, BIC <= min(DP_t2.vv.h12_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_t2.vv.h12_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.h1.VV.lv,
                                    method= "Nelder-Mead",
@@ -1273,12 +1323,15 @@ DP_min_t2.vv.h12_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.h1.VV.lv,
                                                 alpha22 = coef(DPcomp_pe_mod)[5],
                                                 alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t2.vv.h12_fixLV_mod, file = "DP_t2.vv.h12_fixLV_mod.Rdata")
-tidy(DP_min_t2.vv.h12_fixLV_mod)
+#save(DP_min_t2.vv.h12_fixLV_mod, file = "DP_t2.vv.h12_fixLV_mod.Rdata")
+Dexio_fit6 <- tidy(DP_min_t2.vv.h12_fixLV_mod)
 
 (nrow(DP_t2.vv.h12_PECs)/nrow(DP_t2.vv.h12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.vv.h12_fixLV_mod)
 
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit6$estimate, Sigma = vcov(DP_min_t2.vv.h12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit6_pe_confint <- apply(pars.picked,2,quant)
 
 #### 7. Type II + Crowley-Martin #####
 ##### Search Grid #####
@@ -1416,8 +1469,11 @@ DP_t2.cm_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t2.cm_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_t2.cm <- DP_t2.cm_PECs %>% filter(BIC == min(DP_t2.cm_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
-min_t2.cm <- min_t2.cm[1,]
+min_t2.cm <- DP_t2.cm_PECs %>% filter(BIC <= min(DP_t2.cm_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t2.cm)>1){
+  min_t2.cm <- DP_t2.cm_PECs %>% filter(strtpt %in% sample(filter(DP_t2.cm_PECs, BIC <= min(DP_t2.cm_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_t2.cm_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.CM.lv,
                                method= "Nelder-Mead",
@@ -1449,12 +1505,15 @@ DP_min_t2.cm_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.CM.lv,
                                             alpha22 = coef(DPcomp_pe_mod)[5],
                                             alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t2.cm_fixLV_mod, file = "DP_t2.cm_fixLV_mod.Rdata")
-tidy(DP_min_t2.cm_fixLV_mod)
+#save(DP_min_t2.cm_fixLV_mod, file = "DP_t2.cm_fixLV_mod.Rdata")
+Dexio_fit7 <- tidy(DP_min_t2.cm_fixLV_mod)
 
 (nrow(DP_t2.cm_PECs)/nrow(DP_t2.cm_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.cm_fixLV_mod)
 
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit7$estimate, Sigma = vcov(DP_min_t2.cm_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit7_pe_confint <- apply(pars.picked,2,quant)
 
 #### 8. Type III #####
 ##### Search Grid #####
@@ -1594,7 +1653,12 @@ DP_t3_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t3_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_T3 <- DP_t3_PECs %>% filter(BIC == min(DP_t3_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_T3 <- DP_t3_PECs %>% filter(BIC <= min(DP_t3_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_T3)>1){
+  min_T3 <- DP_t3_PECs %>% filter(strtpt %in% sample(filter(DP_t3_PECs, BIC <= min(DP_t3_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
+
 
 DP_min_t3_fixLV_mod =  mle2(minuslogl = nll.odeint.t3.a1.h1.lv,
                             method= "Nelder-Mead",
@@ -1627,11 +1691,15 @@ DP_min_t3_fixLV_mod =  mle2(minuslogl = nll.odeint.t3.a1.h1.lv,
                                          alpha22 = coef(DPcomp_pe_mod)[5],
                                          alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t3_fixLV_mod, file = "DP_t3_fixLV_mod.Rdata")
-tidy(DP_min_t3_fixLV_mod)
+#save(DP_min_t3_fixLV_mod, file = "DP_t3_fixLV_mod.Rdata")
+Dexio_fit8 <- tidy(DP_min_t3_fixLV_mod)
 
 (nrow(DP_t3_PECs)/nrow(DP_t3_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3_fixLV_mod)
+
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit8$estimate, Sigma = vcov(DP_min_t3_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit8_pe_confint <- apply(pars.picked,2,quant)
 
 #### 9. Type III + linear a TIM #####
 ##### Search Grid #####
@@ -1775,7 +1843,11 @@ DP_t3.a12_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t3.a12_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_t3.a12 <- DP_t3.a12_PECs %>% filter(BIC == min(DP_t3.a12_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_t3.a12 <- DP_t3.a12_PECs %>% filter(BIC <= min(DP_t3.a12_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t3.a12)>1){
+  min_t3.a12 <- DP_t3.a12_PECs %>% filter(strtpt %in% sample(filter(DP_t3.a12_PECs, BIC <= min(DP_t3.a12_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_t3.a12_fixLV_mod =  mle2(minuslogl = nll.odeint.t3.a1.h1.lv,
                                 method= "Nelder-Mead",
@@ -1808,12 +1880,15 @@ DP_min_t3.a12_fixLV_mod =  mle2(minuslogl = nll.odeint.t3.a1.h1.lv,
                                              alpha22 = coef(DPcomp_pe_mod)[5],
                                              alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t3.a12_fixLV_mod, file = "DP_t3.a12_fixLV_mod.Rdata")
-tidy(DP_min_t3.a12_fixLV_mod)
+#save(DP_min_t3.a12_fixLV_mod, file = "DP_t3.a12_fixLV_mod.Rdata")
+Dexio_fit9 <- tidy(DP_min_t3.a12_fixLV_mod)
 
 (nrow(DP_t3.a12_PECs)/nrow(DP_t3.a12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3.a12_fixLV_mod)
 
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit9$estimate, Sigma = vcov(DP_min_t3.a12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit9_pe_confint <- apply(pars.picked,2,quant)
 
 #### 10. Type III + linear h TIM #####
 ##### Search Grid #####
@@ -1956,7 +2031,12 @@ DP_t3.h12_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t3.h12_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_t3.h12 <- DP_t3.h12_PECs %>% filter(BIC == min(DP_t3.h12_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_t3.h12 <- DP_t3.h12_PECs %>% filter(BIC <= min(DP_t3.h12_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t3.h12)>1){
+  min_t3.h12 <- DP_t3.h12_PECs %>% filter(strtpt %in% sample(filter(DP_t3.h12_PECs, BIC <= min(DP_t3.h12_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
+
 
 DP_min_t3.h12_fixLV_mod =  mle2(minuslogl = nll.odeint.t3.a1.h1.lv,
                                 method= "Nelder-Mead",
@@ -1989,11 +2069,15 @@ DP_min_t3.h12_fixLV_mod =  mle2(minuslogl = nll.odeint.t3.a1.h1.lv,
                                              alpha22 = coef(DPcomp_pe_mod)[5],
                                              alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t3.h12_fixLV_mod, file = "DP_t3.h12_fixLV_mod.Rdata")
-tidy(DP_min_t3.h12_fixLV_mod)
+#save(DP_min_t3.h12_fixLV_mod, file = "DP_t3.h12_fixLV_mod.Rdata")
+Dexio_fit10 <- tidy(DP_min_t3.h12_fixLV_mod)
 
 (nrow(DP_t3.h12_PECs)/nrow(DP_t3.h12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3.h12_fixLV_mod)
+
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit10$estimate, Sigma = vcov(DP_min_t3.h12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit10_pe_confint <- apply(pars.picked,2,quant)
 
 #### 11. Type III + linear a TIM  + linear h TIM #####
 ##### Search Grid #####
@@ -2141,7 +2225,11 @@ DP_t3.a12.h12_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t3.a12.h12_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_t3.a12.h12 <- DP_t3.a12.h12_PECs %>% filter(BIC == min(DP_t3.a12.h12_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_t3.a12.h12 <- DP_t3.a12.h12_PECs %>% filter(BIC <= min(DP_t3.a12.h12_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t3.a12.h12)>1){
+  min_t3.a12.h12 <- DP_t3.a12.h12_PECs %>% filter(strtpt %in% sample(filter(DP_t3.a12.h12_PECs, BIC <= min(DP_t3.a12.h12_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_t3.a12.h12_fixLV_mod =  mle2(minuslogl = nll.odeint.t3.a1.h1.lv,
                                     method= "Nelder-Mead",
@@ -2174,12 +2262,15 @@ DP_min_t3.a12.h12_fixLV_mod =  mle2(minuslogl = nll.odeint.t3.a1.h1.lv,
                                                  alpha22 = coef(DPcomp_pe_mod)[5],
                                                  alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t3.a12.h12_fixLV_mod, file = "DP_t3.a12.h12_fixLV_mod.Rdata")
-tidy(DP_min_t3.a12.h12_fixLV_mod)
+#save(DP_min_t3.a12.h12_fixLV_mod, file = "DP_t3.a12.h12_fixLV_mod.Rdata")
+Dexio_fit11 <- tidy(DP_min_t3.a12.h12_fixLV_mod)
 
 (nrow(DP_t3.a12.h12_PECs)/nrow(DP_t3.a12.h12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3.a12.h12_fixLV_mod)
 
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit11$estimate, Sigma = vcov(DP_min_t3.a12.h12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit11_pe_confint <- apply(pars.picked,2,quant)
 
 #### 12. Type III + van Veen #####
 ##### Search Grid #####
@@ -2324,8 +2415,11 @@ DP_t3.vv_fixLV_pe %>% arrange(BIC)
    filter(BIC <= min(DP_t3.vv_fixLV_pe$BIC, na.rm = T)+2) %>% 
    arrange(BIC)) #check for similarity in parameter estimates within 2 AIC of min
 
-set.seed(192); 
-min_t3.vv <- DP_t3.vv_PECs %>% filter(strtpt %in% sample(filter(DP_t3.vv_PECs, BIC <= min(DP_t3.vv_fixLV_pe$BIC, na.rm = T)+0.1)$strtpt,1)) #min BIC was giving odd fitting - but all others with similar BIC fit fine - randomize to choose one
+min_t3.vv <- DP_t3.vv_PECs %>% filter(BIC <= min(DP_t3.vv_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t3.vv)>1){
+  min_t3.vv <- DP_t3.vv_PECs %>% filter(strtpt %in% sample(filter(DP_t3.vv_PECs, BIC <= min(DP_t3.vv_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_t3.vv_fixLV_mod =  mle2(minuslogl = nll.odeint.T3.h1.VV.lv,
                                control = list(maxit = 5000), 
@@ -2360,11 +2454,15 @@ DP_min_t3.vv_fixLV_mod =  mle2(minuslogl = nll.odeint.T3.h1.VV.lv,
                                             alpha22 = coef(DPcomp_pe_mod)[5],
                                             alpha21 = coef(DPcomp_pe_mod)[6]) 
 )
-save(DP_min_t3.vv_fixLV_mod, file = "DP_t3.vv_fixLV_mod.Rdata")
-tidy(DP_min_t3.vv_fixLV_mod)
+#save(DP_min_t3.vv_fixLV_mod, file = "DP_t3.vv_fixLV_mod.Rdata")
+Dexio_fit12 <- tidy(DP_min_t3.vv_fixLV_mod)
 
 (nrow(DP_t3.vv_PECs)/nrow(DP_t3.vv_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3.vv_fixLV_mod)
+
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit12$estimate, Sigma = vcov(DP_min_t3.vv_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit12_pe_confint <- apply(pars.picked,2,quant)
 
 #### 13. Type III + Crowley-Martin #####
 ##### Search Grid #####
@@ -2508,7 +2606,11 @@ DP_t3.cm_fixLV_pe %>% arrange(BIC)
    filter(converge == 0) %>% 
    filter(BIC <= min(DP_t3.cm_fixLV_pe$BIC, na.rm = T)+2)) #check for similarity in parameter estimates within 2 AIC of min
 
-min_t3.cm <- DP_t3.cm_PECs %>% filter(BIC == min(DP_t3.cm_PECs$BIC, na.rm = T)) %>% select(c(a_log.est:sigma2.est, BIC))
+min_t3.cm <- DP_t3.cm_PECs %>% filter(BIC <= min(DP_t3.cm_PECs$BIC, na.rm = T)+0.0001) %>% dplyr::select(c(a_log.est:sigma2.est, BIC))
+
+if(nrow(min_t3.cm)>1){
+  min_t3.cm <- DP_t3.cm_PECs %>% filter(strtpt %in% sample(filter(DP_t3.cm_PECs, BIC <= min(DP_t3.cm_PECs$BIC, na.rm = T)+0.0001)$strtpt,1))
+}
 
 DP_min_t3.cm_fixLV_mod =  mle2(minuslogl = nll.odeint.T3.CM.lv,
                                method= "Nelder-Mead",
@@ -2541,11 +2643,15 @@ DP_min_t3.cm_fixLV_mod =  mle2(minuslogl = nll.odeint.T3.CM.lv,
                                             alpha22 = coef(DPcomp_pe_mod)[5],
                                             alpha21 = coef(DPcomp_pe_mod)[6])
 )
-save(DP_min_t3.cm_fixLV_mod, file = "DP_t3.cm_fixLV_mod.Rdata")
-tidy(DP_min_t3.cm_fixLV_mod)
+#save(DP_min_t3.cm_fixLV_mod, file = "DP_t3.cm_fixLV_mod.Rdata")
+Dexio_fit13 <- tidy(DP_min_t3.cm_fixLV_mod)
 
 (nrow(DP_t3.cm_PECs)/nrow(DP_t3.cm_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3.cm_fixLV_mod)
+
+set.seed(1001)
+pars.picked = mvrnorm(1000, mu = Dexio_fit13$estimate, Sigma = vcov(DP_min_t3.cm_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
+Dexio_fit13_pe_confint <- apply(pars.picked,2,quant)
 
 
 #### BIC Table ####
@@ -2562,34 +2668,66 @@ DP_BIC<-as.data.frame(BIC(DP_min_T2_fixLV_mod,
                           DP_min_t3.a12.h12_fixLV_mod,
                           DP_min_t3.vv_fixLV_mod,
                           DP_min_t3.cm_fixLV_mod))
-DP_BIC$model<-seq(1, nrow(DP_BIC), by =1); DP_BIC$dBIC<-round(DP_BIC$BIC-BIC(DP_min_t3.a12_fixLV_mod),1)
+DP_BIC$model<-seq(1, nrow(DP_BIC), by =1); DP_BIC$dBIC<-round(DP_BIC$BIC-min(DP_BIC$BIC, na.rm = T),1)
 
 DP_BIC %>% arrange(BIC)
 
-c(exp(coef(DP_min_T2_fixLV_mod)[3]),
-  exp(coef(DP_min_t2.a12_fixLV_mod)[3]),
-  exp(coef(DP_min_t2.h12_fixLV_mod)[3]),
-  exp(coef(DP_min_t2.a12.h12_fixLV_mod)[3]),
-  exp(coef(DP_min_t2.vv_fixLV_mod)[2]),
-  exp(coef(DP_min_t2.vv.h12_fixLV_mod)[2]),
-  exp(coef(DP_min_t2.cm_fixLV_mod)[2]),
-  exp(coef(DP_min_t3_fixLV_mod)[3]),
-  exp(coef(DP_min_t3.a12_fixLV_mod)[3]),
-  exp(coef(DP_min_t3.h12_fixLV_mod)[3]),
-  exp(coef(DP_min_t3.a12.h12_fixLV_mod)[3]),
-  exp(coef(DP_min_t3.vv_fixLV_mod)[2]),
-  exp(coef(DP_min_t3.cm_fixLV_mod)[2]))
+#### Parameter Table
+pe_list <- list(coef(DP_min_T2_fixLV_mod),
+                coef(DP_min_t2.a12_fixLV_mod),
+                coef(DP_min_t2.h12_fixLV_mod),
+                coef(DP_min_t2.a12.h12_fixLV_mod),
+                coef(DP_min_t2.vv_fixLV_mod),
+                coef(DP_min_t2.vv.h12_fixLV_mod),
+                coef(DP_min_t2.cm_fixLV_mod),
+                coef(DP_min_t3_fixLV_mod),
+                coef(DP_min_t3.a12_fixLV_mod),
+                coef(DP_min_t3.h12_fixLV_mod),
+                coef(DP_min_t3.a12.h12_fixLV_mod),
+                coef(DP_min_t3.vv_fixLV_mod),
+                coef(DP_min_t3.cm_fixLV_mod)
+)
 
-c(coef(DP_min_T2_fixLV_mod)[3],
-  coef(DP_min_t2.a12_fixLV_mod)[3],
-  coef(DP_min_t2.h12_fixLV_mod)[4],
-  coef(DP_min_t2.a12.h12_fixLV_mod)[4],
-  coef(DP_min_t2.vv_fixLV_mod)[3],
-  coef(DP_min_t2.vv.h12_fixLV_mod)[3],
-  coef(DP_min_t2.cm_fixLV_mod)[3],
-  coef(DP_min_t3_fixLV_mod)[3],
-  coef(DP_min_t3.a12_fixLV_mod)[3],
-  coef(DP_min_t3.h12_fixLV_mod)[4],
-  coef(DP_min_t3.a12.h12_fixLV_mod)[4],
-  coef(DP_min_t3.vv_fixLV_mod)[3],
-  coef(DP_min_t3.cm_fixLV_mod)[3])
+pe_table <- as.data.frame(do.call(rbind, lapply(lapply(pe_list, unlist), "[",
+                                                unique(unlist(c(sapply(pe_list,names)))))))
+pe_table$model<-seq(1, nrow(pe_table), by =1)
+pe_table
+
+#### Variance table 
+LCI_list <- list(Dexio_fit1_pe_confint[1,],
+                 Dexio_fit2_pe_confint[1,],
+                 Dexio_fit3_pe_confint[1,],
+                 Dexio_fit4_pe_confint[1,],
+                 Dexio_fit5_pe_confint[1,],
+                 Dexio_fit6_pe_confint[1,],
+                 Dexio_fit7_pe_confint[1,],
+                 Dexio_fit8_pe_confint[1,],
+                 Dexio_fit9_pe_confint[1,],
+                 Dexio_fit10_pe_confint[1,],
+                 Dexio_fit11_pe_confint[1,],
+                 Dexio_fit12_pe_confint[1,],
+                 Dexio_fit13_pe_confint[1,])
+LCI_table <- as.data.frame(do.call(rbind, lapply(lapply(LCI_list, unlist), "[",
+                                                 unique(unlist(c(sapply(LCI_list,names)))))))
+colnames(LCI_table) <- c("a_log","h_log","sigma","sigma2","a12","h12","log_w","kr_log")
+LCI_table$model<-seq(1, nrow(LCI_table), by =1)
+LCI_table
+
+UCI_list <- list(Dexio_fit1_pe_confint[2,],
+                 Dexio_fit2_pe_confint[2,],
+                 Dexio_fit3_pe_confint[2,],
+                 Dexio_fit4_pe_confint[2,],
+                 Dexio_fit5_pe_confint[2,],
+                 Dexio_fit6_pe_confint[2,],
+                 Dexio_fit7_pe_confint[2,],
+                 Dexio_fit8_pe_confint[2,],
+                 Dexio_fit9_pe_confint[2,],
+                 Dexio_fit10_pe_confint[2,],
+                 Dexio_fit11_pe_confint[2,],
+                 Dexio_fit12_pe_confint[2,],
+                 Dexio_fit13_pe_confint[2,])
+UCI_table <- as.data.frame(do.call(rbind, lapply(lapply(UCI_list, unlist), "[",
+                                                 unique(unlist(c(sapply(UCI_list,names)))))))
+colnames(UCI_table) <- c("a_log","h_log","sigma","sigma2","a12","h12","log_w","kr_log")
+UCI_table$model<-seq(1, nrow(UCI_table), by =1)
+UCI_table
