@@ -1,0 +1,23 @@
+Variable,Units,Description,Levels,Notes
+Date,D.M.Y,Calander date data collected,22 days from 23.11.2021 to 30.01.2022,
+Exp,,Experimental Data set obsevation belongs to,CP: Colpidium-Paramecium-Spathidium Community,
+,,,DP: Dexiostoma-Paramecium-Spathidium Community,
+Type,,Type of Experimental observation,Colp_Con: Colpidium only - used to quanitify growth,
+,,,Colp_FR: Colpidium with Spathidium - used for single species functional response,
+,,,Para_Con: Paramecium only - used to quanitify growth,
+,,,Para_FR: Paramecium with Spathidium - used for single species functional response,
+,,,Comp_Control: Prey (Colpidium or Dexiostoma) and Paramecium used to quantify competition,
+,,,"MSFR: Prey (Colpidium or Dexiostoma), Paramecium and Spathidium",
+,,,Dexio_Con: Dexiostoma only - used to quanitify growth,
+,,,Dexio_FR: Colpidium with Spathidium - used for single species functional response,
+Pred_YN,,,Y: Predator Presence,
+,,,N: Predator Absent,
+Time.day,Day,Length of incubation ,Continuous numeric data,
+Pred_T0.dens.ml,Individuals per mL,Density of Spathidium prior to incubation,0 or 5 individuals/mL,Whole numbers only
+Pred_T24.dens.ml,Individuals per mL,Density of Spathidium after incubation,Continuous integers 0 - 23,Whole numbers only - as less than 1mL was counted decimals were rounded to whole numbers
+Dexio_T0.dens.ml,Individuals per mL,Density of Dexiostoma prior to incubation,"Continuous numeric data, NA indicates that incubation was a CP experiment","In Para_Con and Para_FR treatments Dexiostoma was NOT present, but 0 prevent fitting so all true 0 are replaced by the integer 1"
+Dexio_T24.dens.ml,Individuals per mL,Density of Dexiostoma after incubation,"Continuous numeric data, NA indicates that incubation was a CP experiment","In Para_Con and Para_FR treatments Dexiostoma was NOT present, but 0 prevent fitting so all true 0 are replaced by the integer 1"
+Colp_T0.dens.ml,Individuals per mL,Density of Colpidium prior to incubation,"Continuous numeric data, NA indicates that incubation was a DP experiment","In Para_Con and Para_FR treatments Colpidium was NOT present, but 0 prevent fitting so all true 0 are replaced by the integer 1"
+Colp_T24.dens.ml,Individuals per mL,Density of Colpidium after incubation,"Continuous numeric data, NA indicates that incubation was a DP experiment","In Para_Con and Para_FR treatments Dexiostoma was NOT present, but 0 prevent fitting so all true 0 are replaced by the integer 1"
+Para_T0.dens.ml,Individuals per mL,Density of Paramecium prior to incubation,Continuous numeric data,
+Para_T24.dens.ml,Individuals per mL,Density of Paramecium after incubation,Continuous numeric data,
