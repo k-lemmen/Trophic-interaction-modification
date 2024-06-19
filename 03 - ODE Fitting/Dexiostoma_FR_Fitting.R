@@ -1,4 +1,42 @@
-# Model comparisons #
+#### Functional Response Comparisons for Dexiostoma Community #####
+
+# ----------------------------------------------------------------- #
+# 
+# Script for ODE fitting of 13 different functional response forms using a response surface approach 
+#
+# The following R-code is based on the method of:
+#
+# Rosenbaum, B. & Rall, B.C. (2018). Fitting functional responses: Direct parameter estimation by
+# simulating differential equations. Methods in Ecology and Evolution.
+#
+# Daugaard, U., Petchey, O.L. & Pennekamp, F. (2019). Warming can destabilize predator–prey interactions
+# by shifting the functional response from Type III to Type II.
+#
+# This method estimates the functional response parameters directly by simulating differential equations
+#
+# For this, the package odeintr is used. For a manual about the use of the method and a detailed description of the 
+# functions, see the paper of Rosenbaum and Rall (2018) mentioned above
+#
+#
+#
+# Please note that running this script in full is computationally intensive. 
+#
+# For reference, when using a Mac Studio computer (2022) with an Apple M1 Ultra Chip and 20 cores (16 performance,  
+# 4 efficiency) this script took ~12 hours to run (when using 19/20 cores). 
+#
+# The fewer cores available, the longer the script will take to run. 
+#
+# Rdata and CSV files with the output from the search grid process (the most computationally intense aspect
+# of the script) can be found in the folder "Trophic-interaction-modification/05 - Output/Search Grid/Dexiostoma" 
+# and can be manually loaded into the workspace.
+#
+#
+# Running the search grid (even with the same starting parameter values) may result in final parameter estimates
+# that differ slightly from those reported in Table S2-5. This is expected due to the optimization procedure.
+#
+# ----------------------------------------------------------------- #
+
+
 library(tidyverse)
 library(here)
 library(bbmle)
@@ -402,6 +440,7 @@ DP_min_T2_fixLV_mod =  mle2(minuslogl = nll.odeint.t2.a1.h1.lv,
 (nrow(DP_T2_PECs)/nrow(DP_t2_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_T2_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit1$estimate, Sigma = vcov(DP_min_T2_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit1_pe_confint <- apply(pars.picked,2,quant)
@@ -585,6 +624,7 @@ Dexio_fit2 <- tidy(DP_min_t2.a12_fixLV_mod)
 (nrow(DP_t2.a12_PECs)/nrow(DP_t2.a12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.a12_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit2$estimate, Sigma = vcov(DP_min_t2.a12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit2_pe_confint <- apply(pars.picked,2,quant)
@@ -768,6 +808,7 @@ Dexio_fit3 <- tidy(DP_min_t2.h12_fixLV_mod)
 (nrow(DP_t2.h12_PECs)/nrow(DP_t2.h12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.h12_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit3$estimate, Sigma = vcov(DP_min_t2.h12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit3_pe_confint <- apply(pars.picked,2,quant)
@@ -955,6 +996,7 @@ Dexio_fit4 <- tidy(DP_min_t2.a12.h12_fixLV_mod)
 (nrow(DP_t2.a12.h12_PECs)/nrow(DP_t2.a12.h12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.a12.h12_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit4$estimate, Sigma = vcov(DP_min_t2.a12.h12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit4_pe_confint <- apply(pars.picked,2,quant)
@@ -1139,6 +1181,7 @@ Dexio_fit5 <- tidy(DP_min_t2.vv_fixLV_mod)
 (nrow(DP_t2.vv_PECs)/nrow(DP_t2.vv_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.vv_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit5$estimate, Sigma = vcov(DP_min_t2.vv_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit5_pe_confint <- apply(pars.picked,2,quant)
@@ -1329,6 +1372,7 @@ Dexio_fit6 <- tidy(DP_min_t2.vv.h12_fixLV_mod)
 (nrow(DP_t2.vv.h12_PECs)/nrow(DP_t2.vv.h12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.vv.h12_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit6$estimate, Sigma = vcov(DP_min_t2.vv.h12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit6_pe_confint <- apply(pars.picked,2,quant)
@@ -1511,6 +1555,7 @@ Dexio_fit7 <- tidy(DP_min_t2.cm_fixLV_mod)
 (nrow(DP_t2.cm_PECs)/nrow(DP_t2.cm_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t2.cm_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit7$estimate, Sigma = vcov(DP_min_t2.cm_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit7_pe_confint <- apply(pars.picked,2,quant)
@@ -1697,6 +1742,7 @@ Dexio_fit8 <- tidy(DP_min_t3_fixLV_mod)
 (nrow(DP_t3_PECs)/nrow(DP_t3_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit8$estimate, Sigma = vcov(DP_min_t3_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit8_pe_confint <- apply(pars.picked,2,quant)
@@ -1886,6 +1932,7 @@ Dexio_fit9 <- tidy(DP_min_t3.a12_fixLV_mod)
 (nrow(DP_t3.a12_PECs)/nrow(DP_t3.a12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3.a12_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit9$estimate, Sigma = vcov(DP_min_t3.a12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit9_pe_confint <- apply(pars.picked,2,quant)
@@ -2075,6 +2122,7 @@ Dexio_fit10 <- tidy(DP_min_t3.h12_fixLV_mod)
 (nrow(DP_t3.h12_PECs)/nrow(DP_t3.h12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3.h12_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit10$estimate, Sigma = vcov(DP_min_t3.h12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit10_pe_confint <- apply(pars.picked,2,quant)
@@ -2268,6 +2316,7 @@ Dexio_fit11 <- tidy(DP_min_t3.a12.h12_fixLV_mod)
 (nrow(DP_t3.a12.h12_PECs)/nrow(DP_t3.a12.h12_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3.a12.h12_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit11$estimate, Sigma = vcov(DP_min_t3.a12.h12_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit11_pe_confint <- apply(pars.picked,2,quant)
@@ -2460,6 +2509,7 @@ Dexio_fit12 <- tidy(DP_min_t3.vv_fixLV_mod)
 (nrow(DP_t3.vv_PECs)/nrow(DP_t3.vv_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3.vv_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit12$estimate, Sigma = vcov(DP_min_t3.vv_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit12_pe_confint <- apply(pars.picked,2,quant)
@@ -2649,6 +2699,7 @@ Dexio_fit13 <- tidy(DP_min_t3.cm_fixLV_mod)
 (nrow(DP_t3.cm_PECs)/nrow(DP_t3.cm_fixLV_pe %>% filter(converge == 0))) * 100 # percent of starting combinations within 2 AIC that 
 BIC(DP_min_t3.cm_fixLV_mod)
 
+pars.picked <- NA
 set.seed(1001)
 pars.picked = mvrnorm(1000, mu = Dexio_fit13$estimate, Sigma = vcov(DP_min_t3.cm_fixLV_mod)) # pick new parameter values by sampling from multivariate normal distribution based on fit
 Dexio_fit13_pe_confint <- apply(pars.picked,2,quant)
