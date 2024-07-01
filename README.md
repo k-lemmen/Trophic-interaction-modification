@@ -18,3 +18,9 @@ Outputs can be found in the “05 – Output” Folder, this includes (i) Search
 R scripts and outputs for analysis found in the supplementary materials are in the '06 - Appendix Analysis" folder. 
 
 Metadata can be found in the “10 – Metadata” folder and provides a description and units for all variables.
+
+### Note regarding ODEs  
+
+The function used to fit the ODEs is from the now archieved odeintr package (https://CRAN.R-project.org/package=odeintr). Formerly available versions can be obtained from https://cran.r-project.org/src/contrib/Archive/odeintr/.
+
+<a href="https://doi.org/10.5281/zenodo.12190072"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.12190072.svg" alt="DOI"></a>
